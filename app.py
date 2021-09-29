@@ -108,8 +108,46 @@ fig = plot.get_figure()
 col3.write(file3['WELL_YIELD_GPM'].describe(percentiles=[]),use_container_width=True)
 col3.pyplot(fig,clear_figure=True)
 
-import plotly.express as px
-fig = px.scatter_mapbox(file3, lat="lat", lon="lon",     color="WELL_YIELD_GPM", size="WELL_DEPTH_FT",
-                  color_continuous_scale=px.colors.sequential.Viridis, size_max=15, zoom=10)
-fig.update_layout(mapbox_style="carto-darkmatter",height=750)
-st.plotly_chart(fig,use_container_width=True,height=100)
+# import plotly.express as px
+# fig = px.scatter_mapbox(file3, lat="lat", lon="lon",     color="WELL_YIELD_GPM", size="WELL_DEPTH_FT",
+#                   color_continuous_scale=px.colors.sequential.Viridis, size_max=15, zoom=10)
+# fig.update_layout(mapbox_style="carto-darkmatter",height=750)
+# st.plotly_chart(fig,use_container_width=True,height=100)
+
+df = file3[['lat','lon','WELL_DEPTH_FT']].dropna()
+
+import pydeck as pdk
+
+st.pydeck_chart(pdk.Deck(
+    tooltip=True,
+    map_style='mapbox://styles/mapbox/light-v9',
+    initial_view_state=pdk.ViewState(
+        latitude=file3['lat'].mean(),
+        longitude=file3['lon'].mean(),
+        zoom=11,
+        pitch=50,
+    ),
+    
+    layers=[
+        pdk.Layer(
+           'HexagonLayer',
+           data=df,
+           get_position='[lon, lat]',
+           elevation_scale=50,
+           radius = 100,
+           elevation_range=[0, 100],
+           pickable=True,
+           extruded=True,
+           auto_highlight=True,
+        ),
+
+        
+        pdk.Layer(
+            'ScatterplotLayer',
+            data=df,
+            get_position='[lon, lat]',
+            get_color='[200, 30, 0, 160]',
+            get_radius=100,
+        ),
+    ],
+))
