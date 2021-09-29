@@ -111,5 +111,5 @@ col3.pyplot(fig,clear_figure=True)
 import plotly.express as px
 fig = px.scatter_mapbox(file3, lat="lat", lon="lon",     color="WELL_YIELD_GPM", size="WELL_DEPTH_FT",
                   color_continuous_scale=px.colors.sequential.Viridis, size_max=15, zoom=10)
-fig.update_layout(mapbox_style="open-street-map",height=750)
+fig.update_layout(mapbox_style="carto-darkmatter",height=750)
 st.plotly_chart(fig,use_container_width=True,height=100)
