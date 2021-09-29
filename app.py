@@ -22,7 +22,7 @@ plt.style.use('dark_background')
 st.title('IWD Well Intelligence Dashboard')
 st.set_option('deprecation.showPyplotGlobalUse', False)
 
-file =  pd.read_csv('data.csv',parse_dates=True,index_col='DRILL_DATE')
+file =  pd.read_csv('data.csv',parse_dates=True,index_col='DRILL_DATE',low_memory=False)
 file['WELL_LOCATION_TOWN'] = file['WELL_LOCATION_TOWN'].astype(str)
 file = file.rename(columns={'LATITUDE':'lat','LONGITUDE':'lon'})
 locations = file['WELL_LOCATION_TOWN'].unique()
