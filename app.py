@@ -22,24 +22,58 @@ plt.style.use('dark_background')
 st.title('IWD Well Intelligence Dashboard')
 st.set_option('deprecation.showPyplotGlobalUse', False)
 
-file =  pd.read_csv('data.csv',parse_dates=True,index_col='DRILL_DATE',low_memory=False)
+file =  pd.read_csv('data.csv',low_memory=False)
 file['WELL_LOCATION_TOWN'] = file['WELL_LOCATION_TOWN'].astype(str)
 file = file.rename(columns={'LATITUDE':'lat','LONGITUDE':'lon'})
 locations = file['WELL_LOCATION_TOWN'].unique()
 
-st.subheader('Data Filtering')
+locfilt = st.sidebar.radio("Filtering Based on City or Coordinates",('Select Citie(s)','Enter Coordinates'))
 
-
-location = st.sidebar.multiselect('Well Location',np.sort(locations))
-if location:
-    filt1 = file.set_index('WELL_LOCATION_TOWN')
-    file1 = filt1.loc[location]
+if locfilt == 'Select Citie(s)':
+    location = st.sidebar.multiselect('Well Location',np.sort(locations),default='BANGOR')
+    if location:
+        filt1 = file.set_index('WELL_LOCATION_TOWN')
+        file1 = filt1.loc[location]
+        boxdf = pd.DataFrame()
+        boxdf = pd.DataFrame()
+        dfl1 = pd.DataFrame()
+        dfl2 = pd.DataFrame()
+        dfl3 = pd.DataFrame()
+        dfl4 = pd.DataFrame()
+        dfl0 = pd.DataFrame()
+    else:
+        filt1 = file.set_index('WELL_LOCATION_TOWN')
+        file1 = filt1
+        boxdf = pd.DataFrame()
+        dfl1 = pd.DataFrame()
+        dfl2 = pd.DataFrame()
+        dfl3 = pd.DataFrame()
+        dfl4 = pd.DataFrame()
+        dfl0 = pd.DataFrame()
 else:
-    filt1 = file.set_index('WELL_LOCATION_TOWN')
-    file1 = filt1
+    st.sidebar.write('Enter Coordinates and Distance')
+    longitude = st.sidebar.number_input('Well Longitude',value=-68.77464)
+    latitude = st.sidebar.number_input('Well Latitude',value=44.803143)
+    distance = st.sidebar.number_input('Distance from Coordinates to Filter (miles)',value=10)
     
-
-
+    new_lat1 = latitude  + (distance / 3950) * (180 / np.pi)
+    new_lon1 = longitude + (distance / 3950) * (180 / np.pi / np.cos(latitude * np.pi/180))
+    new_lat2 = latitude  - (distance / 3950) * (180 / np.pi)
+    new_lon2 = longitude - (distance / 3950) * (180 / np.pi / np.cos(latitude * np.pi/180))
+    
+    latvec = np.linspace(new_lat1,new_lat2,1000)
+    lonvec= np.linspace(new_lon1,new_lon2,1000)
+    
+    dfl1 = pd.DataFrame(np.array([latvec,np.ones(1000)*new_lon1]).T,columns=['lat','lon'])
+    dfl2 = pd.DataFrame(np.array([latvec,np.ones(1000)*new_lon2]).T,columns=['lat','lon'])
+    dfl3 = pd.DataFrame(np.array([lonvec,np.ones(1000)*new_lat1]).T,columns=['lon','lat'])
+    dfl4 = pd.DataFrame(np.array([lonvec,np.ones(1000)*new_lat2]).T,columns=['lon','lat'])
+    dfl0 = pd.DataFrame(np.array([longitude*np.ones(2),latitude*np.ones(2)]).T,columns=['lon','lat'])
+    
+       
+    file1 = file.set_index('WELL_LOCATION_TOWN')
+    
+st.sidebar.write('Enter Numerical Filter Values for Dataset')    
 well_max = file1['WELL_DEPTH_FT'].max()
 well_min = file1['WELL_DEPTH_FT'].min()
 wellmin = st.sidebar.number_input('Well Depth Minimum Filter',well_min,well_max,value=well_min)
@@ -60,52 +94,76 @@ casemax =  st.sidebar.number_input('Well Casing Maximum Filter',case_min,case_ma
 case_max = file1['CASING_LENGTH_FT'].max()
 case_min = file1['CASING_LENGTH_FT'].min()
 
-file2 = file1[(file1['WELL_DEPTH_FT']>wellmin) & (file1['WELL_DEPTH_FT']<wellmax) &
-                       (file1['WELL_YIELD_GPM']>yieldmin) & (file1['WELL_YIELD_GPM']<yieldmax) &
-                       (file1['CASING_LENGTH_FT']>case_min) & (file1['CASING_LENGTH_FT']<case_max)
-                       ]
+if locfilt == 'Select Citie(s)':
+    file2 = file1[(file1['WELL_DEPTH_FT']>wellmin) & (file1['WELL_DEPTH_FT']<wellmax) &
+                           (file1['WELL_YIELD_GPM']>yieldmin) & (file1['WELL_YIELD_GPM']<yieldmax) &
+                           (file1['CASING_LENGTH_FT']>case_min) & (file1['CASING_LENGTH_FT']<case_max)
+                           ]
+else:
+    file2 = file1[(file1['WELL_DEPTH_FT']>wellmin) & (file1['WELL_DEPTH_FT']<wellmax) &
+                           (file1['WELL_YIELD_GPM']>yieldmin) & (file1['WELL_YIELD_GPM']<yieldmax) &
+                           (file1['CASING_LENGTH_FT']>case_min) & (file1['CASING_LENGTH_FT']<case_max) &
+                           (file1['lon']>new_lon2) & (file1['lon']<new_lon1) &
+                           (file1['lat']>new_lat2) & (file1['lat']<new_lat1)                                                
+                           ]   
 
 hydrofrac = st.sidebar.radio("Filtering Based on Hydrofracing",('Show All','Only Show Hydrofractured'))
 if hydrofrac == 'Only Show Hydrofractured':
     file3 =  file2[file2['HYDROFRACTURE']=='YES']
 else:
     file3 = file2
-# # with col004:
-#    st_dev_filt = st.number_input('Std. Deviation Filter to Remove Values > x St. Dev',
-#                         min_value = 0, 
-#                         max_value = 100,
-#                         value = 3,
-#                         step=1)
 
 data_table_expand = st.beta_expander("Show Data Table",expanded=False)
 with data_table_expand:
     st.write(file3)
       
 col1,col2,col3 = st.beta_columns(3)
+file3['DRILL_DATE']= pd.to_datetime(file3['DRILL_DATE'])
 #COLUMN 1
 
+wmax =file3['WELL_DEPTH_FT'].max()
+wmin =file3['WELL_DEPTH_FT'].min()
 plot = sns.histplot(file3['WELL_DEPTH_FT'],kde=True)
 plot.set(title='WELL DEPTH FT')
-plot.set_xlim(left=wellmin,right=wellmax)
+plot.set_xlim(left=wmin,right=wmax)
 fig = plot.get_figure()
 col1.write(file3['WELL_DEPTH_FT'].describe(percentiles=[]))
 col1.pyplot(fig,clear_figure=True)
 
+plot = sns.scatterplot(data=file3, x='DRILL_DATE',y='WELL_DEPTH_FT')
+plot.set(title='WELL DEPTH OVER TIME')
+fig = plot.get_figure()
+col1.pyplot(fig,clear_figure=True)
 #COLUMN 2
 
+cmax =file3['CASING_LENGTH_FT'].max()
+cmin =file3['CASING_LENGTH_FT'].min()
 plot = sns.histplot(file3['CASING_LENGTH_FT'],kde=True)
 plot.set(title='CASING LENGHT FT')
-plot.set_xlim(left=casemin,right=casemax)
+plot.set_xlim(left=cmin,right=cmax)
 fig = plot.get_figure()
 col2.write(file3['CASING_LENGTH_FT'].describe(percentiles=[]))
 col2.pyplot(fig,clear_figure=True)
 
-#COLUMN 3   
+plot = sns.scatterplot(data=file3, x='DRILL_DATE',y='CASING_LENGTH_FT')
+plot.set(title='CASING LENGTH OVER TIME')
+fig = plot.get_figure()
+col2.pyplot(fig,clear_figure=True)
+
+#COLUMN 3  
+ymax =file3['WELL_YIELD_GPM'].max()
+ymin =file3['WELL_YIELD_GPM'].min() 
 plot = sns.histplot(file3['WELL_YIELD_GPM'],kde=True)
 plot.set(title='WELL YIELD GPM')
-plot.set_xlim(left=yieldmin,right=yieldmax)
+plot.set_xlim(left=ymin,right=ymax)
 fig = plot.get_figure()
 col3.write(file3['WELL_YIELD_GPM'].describe(percentiles=[]),use_container_width=True)
+col3.pyplot(fig,clear_figure=True)
+
+
+plot = sns.scatterplot(data=file3, x='DRILL_DATE',y='WELL_YIELD_GPM')
+plot.set(title='WELL YIELD GPM OVER TIME')
+fig = plot.get_figure()
 col3.pyplot(fig,clear_figure=True)
 
 # import plotly.express as px
@@ -120,7 +178,7 @@ import pydeck as pdk
 
 st.pydeck_chart(pdk.Deck(
     tooltip=True,
-    map_style='mapbox://styles/mapbox/light-v9',
+    map_style='mapbox://styles/mapbox/navigation-night-v1',
     initial_view_state=pdk.ViewState(
         latitude=file3['lat'].mean(),
         longitude=file3['lon'].mean(),
@@ -133,9 +191,9 @@ st.pydeck_chart(pdk.Deck(
            'HexagonLayer',
            data=df,
            get_position='[lon, lat]',
-           elevation_scale=50,
+           elevation=['WELL_DEPTH_FT'],
+           elevation_scale=5,
            radius = 100,
-           elevation_range=[0, 100],
            pickable=True,
            extruded=True,
            auto_highlight=True,
@@ -144,10 +202,43 @@ st.pydeck_chart(pdk.Deck(
         
         pdk.Layer(
             'ScatterplotLayer',
-            data=df,
+            data=dfl1,
             get_position='[lon, lat]',
-            get_color='[200, 30, 0, 160]',
-            get_radius=100,
+            get_color='[255, 0, 0]',
+            get_radius=200,
+        ),
+        pdk.Layer(
+            'ScatterplotLayer',
+            data=dfl2,
+            get_position='[lon, lat]',
+            get_color='[255, 0, 0]',
+            get_radius=200,
+        ),
+        pdk.Layer(
+            'ScatterplotLayer',
+            data=dfl3,
+            get_position='[lon, lat]',
+            get_color='[255, 0, 0]',
+            get_radius=200,
+        ),
+        
+        pdk.Layer(
+            'ScatterplotLayer',
+            data=dfl4,
+            get_position='[lon, lat]',
+            get_color='[255, 0, 0]',
+            get_radius=200,
+        ),
+        pdk.Layer(
+            'ScatterplotLayer',
+            data=dfl0,
+            get_position='[lon, lat]',
+            opacity=0.5,
+            stroked=True,
+            filled=True,
+            get_line_color=['0, 0, 0'],
+            get_fill_color='[255, 0, 0]',
+            get_radius=500,
         ),
     ],
 ))
