@@ -176,69 +176,77 @@ df = file3[['lat','lon','WELL_DEPTH_FT']].dropna()
 
 import pydeck as pdk
 
-st.pydeck_chart(pdk.Deck(
-    tooltip=True,
+
+layer=[
+    pdk.Layer(
+       'HexagonLayer',
+       data=df,
+       get_position='[lon, lat]',
+       elevation=['WELL_DEPTH_FT'],
+       elevation_scale=10,
+       elevation_range=[100/3.2,1000/3.2],
+       radius = 100,
+       pickable=True,
+       extruded=True,
+       auto_highlight=True,
+    ),
+
+    
+    # pdk.Layer(
+    #     'ScatterplotLayer',
+    #     data=dfl1,
+    #     get_position='[lon, lat]',
+    #     get_color='[255, 0, 0]',
+    #     get_radius=200,
+    # ),
+    # pdk.Layer(
+    #     'ScatterplotLayer',
+    #     data=dfl2,
+    #     get_position='[lon, lat]',
+    #     get_color='[255, 0, 0]',
+    #     get_radius=200,
+    # ),
+    # pdk.Layer(
+    #     'ScatterplotLayer',
+    #     data=dfl3,
+    #     get_position='[lon, lat]',
+    #     get_color='[255, 0, 0]',
+    #     get_radius=200,
+    # ),
+    
+    # pdk.Layer(
+    #     'ScatterplotLayer',
+    #     data=dfl4,
+    #     get_position='[lon, lat]',
+    #     get_color='[255, 0, 0]',
+    #     get_radius=200,
+    # ),
+    # pdk.Layer(
+    #     'ScatterplotLayer',
+    #     data=dfl0,
+    #     get_position='[lon, lat]',
+    #     opacity=0.5,
+    #     stroked=True,
+    #     filled=True,
+    #     get_line_color=['0, 0, 0'],
+    #     get_fill_color='[255, 0, 0]',
+    #     get_radius=500,
+    # ),
+    
+    
+]
+
+r = pdk.Deck(
     map_style='mapbox://styles/mapbox/navigation-night-v1',
+    layers = [layer],
+    tooltip={"text": "{position}: {WELL_DEPTH_FT}"},
     initial_view_state=pdk.ViewState(
         latitude=file3['lat'].mean(),
         longitude=file3['lon'].mean(),
         zoom=11,
         pitch=50,
-    ),
     
-    layers=[
-        pdk.Layer(
-           'HexagonLayer',
-           data=df,
-           get_position='[lon, lat]',
-           elevation=['WELL_DEPTH_FT'],
-           elevation_scale=5,
-           radius = 100,
-           pickable=True,
-           extruded=True,
-           auto_highlight=True,
-        ),
-
-        
-        pdk.Layer(
-            'ScatterplotLayer',
-            data=dfl1,
-            get_position='[lon, lat]',
-            get_color='[255, 0, 0]',
-            get_radius=200,
-        ),
-        pdk.Layer(
-            'ScatterplotLayer',
-            data=dfl2,
-            get_position='[lon, lat]',
-            get_color='[255, 0, 0]',
-            get_radius=200,
-        ),
-        pdk.Layer(
-            'ScatterplotLayer',
-            data=dfl3,
-            get_position='[lon, lat]',
-            get_color='[255, 0, 0]',
-            get_radius=200,
-        ),
-        
-        pdk.Layer(
-            'ScatterplotLayer',
-            data=dfl4,
-            get_position='[lon, lat]',
-            get_color='[255, 0, 0]',
-            get_radius=200,
-        ),
-        pdk.Layer(
-            'ScatterplotLayer',
-            data=dfl0,
-            get_position='[lon, lat]',
-            opacity=0.5,
-            stroked=True,
-            filled=True,
-            get_line_color=['0, 0, 0'],
-            get_fill_color='[255, 0, 0]',
-            get_radius=500,
-        ),
-    ],
-))
+    ),
+    )
+    
+st.pydeck_chart(r)
